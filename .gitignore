@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .vercel/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
 *.tsbuildinfo
 .env
 .env.*

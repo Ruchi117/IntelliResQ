@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RapidResQ | Emergency Coordination</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div>
+                <p class="eyebrow">Emergency Response Coordination</p>
+                <h1 class="brand-title">
+                    <svg class="brand-mark" viewBox="0 0 48 48" role="img" aria-label="RapidResQ logo">
+                        <path d="M24 3.5 42.5 14v20L24 44.5 5.5 34V14L24 3.5Z" fill="none" stroke="currentColor" stroke-width="2.5" />
+                        <path d="M12 25h7l4-8 5 15 4-7h5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" />
+                        <path d="M24 9v6m0 18v6" stroke="currentColor" stroke-linecap="round" stroke-width="2" />
+                    </svg>
+                    <span>Rapid<span class="brand-resq">ResQ</span></span>
+                </h1>
+            </div>
+            <nav class="role-switch" aria-label="Dashboard roles">
+                <button class="tab active" data-tab="driver">
+                    <span>🚑</span>
+                    Ambulance Driver
+                </button>
+                <button class="tab" data-tab="monitor">
+                    <span>🩺</span>
+                    Patient Monitor
+                </button>
+                <button class="tab" data-tab="hospital">
+                    <span>🏥</span>
+                    Hospital
+                </button>
+            </nav>
+            <div class="clock-block">
+                <span class="environment-label">DEMO OPERATIONS</span>
+                <time id="dashboard-time">Loading local time…</time>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <p class="demo-notice">Training demonstration · locations, vehicle positions, hospital capacity, and vital readings are sample data, not live dispatch or clinical information.</p>
+        <section class="panel hero-panel">
+            <h2>Emergency Intake</h2>
+            <form id="emergency-form" class="stack-form">
+                <div class="form-grid">
+                    <label>
+                        <span>Patient name</span>
+                        <input type="text" name="patient_name" placeholder="Enter patient name" required />
+                    </label>
+                    <label>
+                        <span>Age</span>
+                        <input type="number" name="age" min="0" max="120" placeholder="Optional" />
+                    </label>
+                    <label class="full-width">
+                        <span>Location</span>
+                        <input type="text" name="location" list="sample-locations" placeholder="Enter location" required />
+                        <datalist id="sample-locations">
+                            <option value="Tirupati Railway Station"></option>
+                            <option value="Tirupati Bus Stand"></option>
+                            <option value="SVIMS Hospital"></option>
+                            <option value="Ruia Government General Hospital"></option>
+                            <option value="Apollo Hospital"></option>
+                            <option value="Alipiri"></option>
+                            <option value="Renigunta"></option>
+                        </datalist>
+                    </label>
+                    <label>
+                        <span>Emergency type</span>
+                        <select name="emergency_type" required>
+                            <option value="">Select type</option>
+                            <option value="Road Accident">Road Accident</option>
+                            <option value="Cardiac Emergency">Cardiac Emergency</option>
+                            <option value="Breathing Difficulty">Breathing Difficulty</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Severity</span>
+                        <select name="severity" required>
+                            <option value="">Select severity</option>
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </label>
+                </div>
+                <button type="submit" class="primary-btn">Register Emergency</button>
+            </form>
+        </section>
+
+        <section class="stats-grid" id="stats-grid">
+            <article class="stat-card accent-blue">
+                <span>Total Emergencies</span>
+                <strong data-stat="total">0</strong>
+            </article>
+            <article class="stat-card accent-amber">
+                <span>Pending</span>
+                <strong data-stat="pending">0</strong>
+            </article>
+            <article class="stat-card accent-green">
+                <span>Assigned</span>
+                <strong data-stat="assigned">0</strong>
+            </article>
+            <article class="stat-card accent-red">
+                <span>Available Ambulances</span>
+                <strong data-stat="available_ambulances">0</strong>
+            </article>
+            <article class="stat-card accent-critical">
+                <span>Critical patients</span>
+                <strong id="critical-patient-count">0</strong>
+            </article>
+        </section>
+
+        <section id="driver-panel" class="panel tab-panel active" aria-live="polite">
+            <div class="panel-header">
+                <h2>Ambulance Driver Dashboard</h2>
+                <span class="pill status-pill">Dispatch operations · demo</span>
+            </div>
+            <div class="driver-layout">
+                <div class="card-block">
+                    <h3>Assigned emergency</h3>
+                    <div id="driver-assignment"></div>
+                </div>
+                <div class="card-block">
+                    <h3>Vehicle & incident map</h3>
+                    <p class="map-caption">One assigned vehicle · simulated straight-line movement · OpenStreetMap base map</p>
+                    <div id="map" aria-label="Emergency coordination map"></div>
+                    <div id="driver-directions" class="directions-panel"></div>
+                </div>
+            </div>
+            <div class="card-block mt-16">
+                <h3>Fleet status</h3>
+                <div id="fleet-status" class="fleet-list"></div>
+            </div>
+        </section>
+
+        <section id="monitor-panel" class="panel tab-panel hidden" aria-live="polite">
+            <div class="panel-header">
+                <h2>Patient Condition Monitoring</h2>
+                <span class="pill monitoring-pill">Nurse-entered patient readings</span>
+            </div>
+            <div class="monitor-layout">
+                <div class="card-block">
+                    <h3>Patient profile</h3>
+                    <div id="patient-profile"></div>
+                </div>
+                <div class="card-block">
+                    <div class="section-heading">
+                        <div>
+                            <h3>Patient vital signals</h3>
+                            <p>Choose a patient, enter the nurse-recorded values below, and save to update this view and hospital queue.</p>
+                        </div>
+                        <label class="patient-picker">
+                            <span>Select patient</span>
+                            <select id="monitor-patient-select" aria-label="Select monitored patient"></select>
+                        </label>
+                    </div>
+                    <div id="vitals-cards" class="vital-grid"></div>
+                    <form id="manual-vitals-form" class="manual-vitals-form mt-16">
+                        <h4>Enter patient readings</h4>
+                        <p>Enter the readings measured by staff. One critical reading, or two or more readings outside the screening range, flags the case Critical. All entered readings within range show Normal.</p>
+                        <p class="threshold-reference">Demo adult screening ranges: HR 60–100 bpm; SpO₂ ≥95%; temperature 36.0–38.4 °C; respiratory rate 12–20/min; BP 90–139/60–89 mmHg. Critical examples: HR &lt;40 or &gt;150, SpO₂ &lt;90%, temperature &lt;35 or ≥40 °C, RR &lt;8 or &gt;30/min, BP systolic &lt;80 or ≥180, or diastolic &lt;50 or ≥120. Screening aid only—not a diagnosis or substitute for clinical judgment.</p>
+                        <div class="vitals-input-grid">
+                            <label>
+                                <span>Nurse / staff name *</span>
+                                <input type="text" name="recorded_by" maxlength="100" autocomplete="name" required />
+                            </label>
+                            <label>
+                                <span>Heart rate (bpm) *</span>
+                                <input type="number" name="heart_rate" min="20" max="250" step="1" required />
+                            </label>
+                            <label>
+                                <span>Oxygen saturation (SpO₂ %) *</span>
+                                <input type="number" name="spo2" min="0" max="100" step="1" required />
+                            </label>
+                            <label>
+                                <span>Temperature (°C) *</span>
+                                <input type="number" name="temperature" min="25" max="45" step="0.1" required />
+                            </label>
+                            <label>
+                                <span>Blood pressure (mmHg)</span>
+                                <input type="text" name="blood_pressure" inputmode="numeric" placeholder="e.g. 120/80" pattern="[0-9]{2,3}/[0-9]{2,3}" />
+                            </label>
+                            <label>
+                                <span>Respiratory rate (breaths/min)</span>
+                                <input type="number" name="respiratory_rate" min="1" max="100" step="1" />
+                            </label>
+                        </div>
+                        <button type="submit" class="primary-btn">Save readings to patient record</button>
+                        <p id="vitals-save-status" class="form-status" role="status" aria-live="polite"></p>
+                    </form>
+                </div>
+            </div>
+            <div class="card-block mt-16">
+                <h3>Condition timeline</h3>
+                <div id="condition-history"></div>
+            </div>
+            <div class="card-block mt-16">
+                <h3>Alert control</h3>
+                <form id="alert-form" class="alert-form">
+                    <textarea name="message" rows="3" placeholder="Describe the patient alert or event"></textarea>
+                    <button type="submit" class="warning-btn">Raise alert</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="hospital-panel" class="panel tab-panel hidden" aria-live="polite">
+            <div class="panel-header">
+                <h2>Hospital Dashboard</h2>
+                <span class="pill hospital-pill">Patient coordination queue · demo</span>
+            </div>
+            <div class="hospital-layout">
+                <div class="card-block">
+                    <h3>Active patient coordination queue</h3>
+                    <div id="incoming-queue"></div>
+                </div>
+                <div class="card-block">
+                    <h3>Hospital readiness</h3>
+                    <div id="hospital-readiness"></div>
+                </div>
+            </div>
+            <div id="hospital-resource-summary" class="hospital-resource-summary"></div>
+            <div class="card-block mt-16">
+                <div class="section-heading">
+                    <div>
+                        <h3>Ambulance & patient locations</h3>
+                        <p class="map-caption">One assigned vehicle · simulated straight-line movement · not live GPS tracking</p>
+                    </div>
+                </div>
+                <div id="hospital-map" aria-label="Hospital view of sample ambulance and incident locations"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
