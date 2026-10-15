@@ -8,7 +8,6 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "rapidresq-demo-key"
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE = BASE_DIR / "intelliresq.db"
